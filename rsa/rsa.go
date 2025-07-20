@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/binary"
 	"encoding/pem"
 	"fmt"
@@ -19,12 +18,13 @@ type RSAKeys struct {
 
 // Encrypt encrypts a message using RSA PKCS#1 v1.5 padding
 func Encrypt(publicKey string, message []byte) ([]byte, error) {
-	decodedKey, err := base64.StdEncoding.DecodeString(publicKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode public key: %v", err)
+	// Parse PEM block
+	block, _ := pem.Decode([]byte(publicKey))
+	if block == nil {
+		return nil, fmt.Errorf("failed to parse PEM block")
 	}
 
-	pub, err := x509.ParsePKIXPublicKey(decodedKey)
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse public key: %v", err)
 	}
@@ -80,9 +80,11 @@ func GenerateKeys() (keys RSAKeys, err error) {
 
 // createSeededRandom creates a deterministic random number generator
 // using SHA256 hash of `Sun corp` -- meant to imitate JAVA's SecureRandom
+// -- that has been replaced with a UUID for uniqueness
 func createSeededRandom() *rand.Rand {
+	uuid := generateUUID()
 	h := sha256.New()
-	h.Write([]byte("Sun corp"))
+	h.Write([]byte(uuid))
 
 	seedBytes := h.Sum(nil)
 
@@ -188,4 +190,13 @@ func publicKeyToPEM(key *rsa.PublicKey) ([]byte, error) {
 	}
 
 	return pem.EncodeToMemory(publicKeyPEM), nil
+}
+
+// generateUUID generates a random UUID
+func generateUUID() string {
+	bytes := make([]byte, 16)
+	cryRand.Read(bytes)
+
+	return fmt.Sprintf("%x-%x-%x-%x-%x",
+		bytes[0:4], bytes[4:6], bytes[6:8], bytes[8:10], bytes[10:16])
 }

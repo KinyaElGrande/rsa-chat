@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -31,6 +33,12 @@ type (
 		client  *Client
 		message []byte
 	}
+
+	user struct {
+		username string
+		token    string
+		pubkey   string
+	}
 )
 
 var (
@@ -43,10 +51,18 @@ var (
 	clients   = make(map[*Client]bool)
 	broadcast = make(chan BroadcastMessage)
 
-	// authentication data for Alice and Bob
-	authTokens = map[string]string{
-		"eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkFMSUNFIiwiYWRtaW4iOnRydWUsImlhdCI6MTc1MTgxMzMxMywiZXhwIjoxNzUxODE2OTEzfQ": "Alice",
-		"eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkJPQiIsImFkbWluIjp0cnVlLCJpYXQiOjE3NTE4MTMzMTMsImV4cCI6MTc1MTgxNjkxM30":    "Bob",
+	// local keys storage
+	users = []*user{
+		&user{
+			username: "Alice",
+			token:    "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkJPQiIsImFkbWluIjp0cnVlLCJpYXQiOjE3NTE4MTMzMTMsImV4cCI6MTc1MTgxNjkxM30",
+			pubkey:   "",
+		},
+		&user{
+			username: "Bob",
+			token:    "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkFMSUNFIiwiYWRtaW4iOnRydWUsImlhdCI6MTc1MTgxMzMxMywiZXhwIjoxNzUxODE2OTEzfQ",
+			pubkey:   "",
+		},
 	}
 )
 
@@ -63,10 +79,9 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// handle token authentication
-	username, ok := authTokens[token]
-	if !ok {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
+	user, err := findUserByToken(token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -79,12 +94,12 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	// Create client instance
 	client := &Client{
 		conn: conn,
-		id:   username,
+		id:   user.username,
 	}
 
 	// Add client to clients map
 	clients[client] = true
-	log.Printf("%s has connected. Total: %d", username, len(clients))
+	log.Printf("%s has connected. Total: %d", user.username, len(clients))
 
 	for {
 		_, msg, err := conn.ReadMessage()
@@ -101,10 +116,13 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				msg := Message{
 					Type:      "keys-exchange",
 					PublicKey: message.PublicKey,
-					From:      username,
+					From:      user.username,
 				}
 
 				responseData, _ := json.Marshal(msg)
+
+				// update the user's public key
+				user.pubkey = message.PublicKey
 
 				broadcastMsg := BroadcastMessage{
 					client:  client,
@@ -126,7 +144,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				// get the public key from the message
 				// encrypt the AES secret key using the public key
 				// encrypt the message using the AES secret key
-				pubKey := message.PublicKey
+				pubKey := getItendedRecipientPubKey(user.username)
 				if pubKey == "" {
 					log.Printf("error: public key is empty")
 					continue
@@ -155,9 +173,9 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				msg := Message{
 					ID:   messageId,
 					Type: "message",
-					Data: string(messageCipher),
-					Key:  string(encryptedKey),
-					From: username,
+					Data: base64.StdEncoding.EncodeToString(messageCipher),
+					Key:  base64.StdEncoding.EncodeToString(encryptedKey),
+					From: user.username,
 				}
 
 				responseData, _ := json.Marshal(msg)
@@ -191,4 +209,25 @@ func handleMessages() {
 			}
 		}
 	}
+}
+
+func findUserByToken(token string) (*user, error) {
+	for _, u := range users {
+		if u.token == token {
+			return u, nil
+		}
+	}
+	return nil, errors.New("Invalid token")
+}
+
+// getItendedRecipientPubKey retrieves intended recipient public key
+// jusst a mockup for GET query
+func getItendedRecipientPubKey(from string) string {
+	for _, u := range users {
+		if u.username != from {
+			return u.pubkey
+		}
+	}
+
+	return ""
 }

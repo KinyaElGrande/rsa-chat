@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	http.HandleFunc("/generate-keys", generateKeysHandler)
 	http.HandleFunc("/ws", handleConnections)
 	go handleMessages()
 

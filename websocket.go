@@ -55,12 +55,12 @@ var (
 	users = []*user{
 		&user{
 			username: "Alice",
-			token:    "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkJPQiIsImFkbWluIjp0cnVlLCJpYXQiOjE3NTE4MTMzMTMsImV4cCI6MTc1MTgxNjkxM30",
+			token:    "a",
 			pubkey:   "",
 		},
 		&user{
 			username: "Bob",
-			token:    "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkFMSUNFIiwiYWRtaW4iOnRydWUsImlhdCI6MTc1MTgxMzMxMywiZXhwIjoxNzUxODE2OTEzfQ",
+			token:    "b",
 			pubkey:   "",
 		},
 	}

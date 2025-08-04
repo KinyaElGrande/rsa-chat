@@ -39,6 +39,20 @@
             <!-- Login Form -->
             <div id="loginForm" class="p-4 space-y-4">
                 <div>
+                    <button
+                        onclick="generateKeysAsync()"
+                        id="connectBtn"
+                        class="bg-secondary text-white font-semibold mt-2 p-2 rounded hover:bg-opacity-90"
+                    >
+                        Generate RSA Keys
+                    </button>
+                    <p class="italic text-sm text-red-500">
+                        Before continuing to chat, you must generate RSA key
+                        pair
+                    </p>
+                </div>
+
+                <div>
                     <label class="block text-sm font-medium mb-1"
                         >Server URL:</label
                     >
@@ -55,30 +69,6 @@
                         id="authToken"
                         type="text"
                         placeholder="Enter your token"
-                        class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                </div>
-
-                <!-- Key File Inputs -->
-                <div>
-                    <label class="block text-sm font-medium mb-1"
-                        >Public Key:</label
-                    >
-                    <input
-                        id="publicKeyFile"
-                        type="file"
-                        accept=".pem,.key,.pub"
-                        class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1"
-                        >Private Key:</label
-                    >
-                    <input
-                        id="privateKeyFile"
-                        type="file"
-                        accept=".pem,.key"
                         class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                 </div>

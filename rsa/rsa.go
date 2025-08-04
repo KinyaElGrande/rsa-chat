@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/pem"
 	"fmt"
@@ -18,8 +19,13 @@ type RSAKeys struct {
 
 // Encrypt encrypts a message using RSA PKCS#1 v1.5 padding
 func Encrypt(publicKey string, message []byte) ([]byte, error) {
+	publicKeyPEM, err := base64.StdEncoding.DecodeString(publicKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode base64: %v", err)
+	}
+
 	// Parse PEM block
-	block, _ := pem.Decode([]byte(publicKey))
+	block, _ := pem.Decode([]byte(publicKeyPEM))
 	if block == nil {
 		return nil, fmt.Errorf("failed to parse PEM block")
 	}

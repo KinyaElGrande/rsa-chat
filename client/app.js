@@ -29,6 +29,58 @@ async function loadPrivateKey() {
   return await readFileContent(fileInput.files[0]);
 }
 
+async function generateKeysAsync() {
+  try {
+    const response = await fetch("http://localhost:8080/generate-keys", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      alert("Failed to Generate Keys");
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      console.log(data);
+
+      // assign the RSA keys to the variables
+      publicKey = data.keys.PublicKey;
+      privateKey = data.keys.PrivateKey;
+
+      const alertMessage = [
+        "🔐 RSA Keys Generated Successfully!",
+        "",
+        "=".repeat(50),
+        "PRIVATE KEY:",
+        "=".repeat(50),
+        data.keys.PrivateKey,
+        "",
+        "=".repeat(50),
+        "PUBLIC KEY:",
+        "=".repeat(50),
+        data.keys.PublicKey,
+        "",
+        "⚠️  Keep your private key secure!",
+      ].join("\n");
+
+      alert(alertMessage);
+    } else {
+      alert("Failed to Generate Keys");
+      console.error("Error:", data.error);
+      return null;
+    }
+  } catch (error) {
+    alert("Failed to Generate Keys, Network error:", error);
+    console.error("Network error:", error);
+    return null;
+  }
+}
+
 async function connect() {
   const serverUrl = document.getElementById("serverUrl").value;
   const authToken = document.getElementById("authToken").value;
@@ -45,10 +97,6 @@ async function connect() {
   errorDiv.textContent = "";
 
   try {
-    // Load keys from selected files
-    publicKey = await loadPublicKey();
-    privateKey = await loadPrivateKey();
-
     const wsUrl = `${serverUrl}?token=${encodeURIComponent(authToken)}`;
     ws = new WebSocket(wsUrl);
 
@@ -200,7 +248,8 @@ function escapeHtml(text) {
 function decryptMessage(encryptedAESKey, encryptedData) {
   try {
     // decrypt the aes key using the private key
-    const pkey = forge.pki.privateKeyFromPem(privateKey);
+    const privateKeyPEM = forge.util.decode64(privateKey);
+    const pkey = forge.pki.privateKeyFromPem(privateKeyPEM);
     const encryptedKeyBytes = forge.util.decode64(encryptedAESKey);
     const decryptedAESSecretKeyRaw = pkey.decrypt(
       encryptedKeyBytes,

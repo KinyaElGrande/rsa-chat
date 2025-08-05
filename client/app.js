@@ -2,34 +2,18 @@ let ws = null;
 let connected = false;
 let publicKey = null;
 let privateKey = null;
-
-// read the file contents as text
-function readFileContent(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
-}
-
-async function loadPublicKey() {
-  const fileInput = document.getElementById("publicKeyFile");
-  if (!fileInput.files[0]) {
-    throw new Error("Please select a public key file");
-  }
-  return await readFileContent(fileInput.files[0]);
-}
-
-async function loadPrivateKey() {
-  const fileInput = document.getElementById("privateKeyFile");
-  if (!fileInput.files[0]) {
-    throw new Error("Please select a private key file");
-  }
-  return await readFileContent(fileInput.files[0]);
-}
+let keysGenerated = false;
 
 async function generateKeysAsync() {
+  const generateBtn = document.getElementById("generateKeysBtn");
+  const generateBtnText = document.getElementById("generateBtnText");
+  const generateSpinner = document.getElementById("generateSpinner");
+
+  // Show loading state
+  generateBtn.disabled = true;
+  generateBtnText.textContent = "Generating Keys...";
+  generateSpinner.classList.remove("hidden");
+
   try {
     const response = await fetch("http://localhost:8080/generate-keys", {
       method: "GET",
@@ -39,53 +23,140 @@ async function generateKeysAsync() {
     });
 
     if (!response.ok) {
-      alert("Failed to Generate Keys");
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
 
     if (data.success) {
-      console.log(data);
-
-      // assign the RSA keys to the variables
       publicKey = data.keys.PublicKey;
       privateKey = data.keys.PrivateKey;
+      keysGenerated = true;
 
-      const alertMessage = [
-        "🔐 RSA Keys Generated Successfully!",
-        "",
-        "=".repeat(50),
-        "PRIVATE KEY:",
-        "=".repeat(50),
-        data.keys.PrivateKey,
-        "",
-        "=".repeat(50),
-        "PUBLIC KEY:",
-        "=".repeat(50),
-        data.keys.PublicKey,
-        "",
-        "⚠️  Keep your private key secure!",
-      ].join("\n");
+      // Display the keys in the UI
+      displayKeys(publicKey, privateKey);
 
-      alert(alertMessage);
+      document.getElementById("keyGenerationStep").classList.add("hidden");
+      document.getElementById("keysDisplay").classList.remove("hidden");
+
+      updateConnectButton();
     } else {
-      alert("Failed to Generate Keys");
-      console.error("Error:", data.error);
-      return null;
+      throw new Error(data.error || "Failed to generate keys");
     }
   } catch (error) {
-    alert("Failed to Generate Keys, Network error:", error);
-    console.error("Network error:", error);
-    return null;
+    console.error("Key generation error:", error);
+    showError("Failed to generate keys: " + error.message);
+
+    // Reset button state
+    generateBtn.disabled = false;
+    generateBtnText.textContent = "Generate RSA Keys";
+    generateSpinner.classList.add("hidden");
   }
 }
 
+function displayKeys(pubKey, privKey) {
+  document.getElementById("publicKeyDisplay").value = pubKey;
+  document.getElementById("privateKeyDisplay").value = privKey;
+}
+
+function regenerateKeys() {
+  document.getElementById("keyGenerationStep").classList.remove("hidden");
+  document.getElementById("keysDisplay").classList.add("hidden");
+
+  // Reset button state
+  const generateBtn = document.getElementById("generateKeysBtn");
+  const generateBtnText = document.getElementById("generateBtnText");
+  const generateSpinner = document.getElementById("generateSpinner");
+
+  generateBtn.disabled = false;
+  generateBtnText.textContent = "Generate RSA Keys";
+  generateSpinner.classList.add("hidden");
+
+  // Clear stored keys
+  publicKey = null;
+  privateKey = null;
+  keysGenerated = false;
+
+  // Update connect button
+  updateConnectButton();
+}
+
+function updateConnectButton() {
+  const connectBtn = document.getElementById("connectBtn");
+  const connectBtnText = document.getElementById("connectBtnText");
+
+  if (keysGenerated) {
+    connectBtn.disabled = false;
+    connectBtnText.textContent = "Connect to Server";
+    connectBtn.classList.remove("bg-gray-400");
+    connectBtn.classList.add("bg-primary");
+  } else {
+    connectBtn.disabled = true;
+    connectBtnText.textContent = "Generate Keys First";
+    connectBtn.classList.remove("bg-primary");
+    connectBtn.classList.add("bg-gray-400");
+  }
+}
+
+function togglePrivateKeyVisibility() {
+  const privateKeyField = document.getElementById("privateKeyDisplay");
+  const eyeOpen = document.getElementById("eyeOpen");
+  const eyeClosed = document.getElementById("eyeClosed");
+
+  if (privateKeyField.type === "password") {
+    privateKeyField.type = "text";
+    eyeOpen.classList.add("hidden");
+    eyeClosed.classList.remove("hidden");
+  } else {
+    privateKeyField.type = "password";
+    eyeOpen.classList.remove("hidden");
+    eyeClosed.classList.add("hidden");
+  }
+}
+
+async function copyToClipboard(elementId, copiedIconId) {
+  const element = document.getElementById(elementId);
+  const copyIcon = document.getElementById(
+    elementId.replace("Display", "CopyIcon"),
+  );
+  const copiedIcon = document.getElementById(copiedIconId);
+
+  try {
+    await navigator.clipboard.writeText(element.value);
+
+    copyIcon.classList.add("hidden");
+    copiedIcon.classList.remove("hidden");
+
+    // Reset after 2 seconds
+    setTimeout(() => {
+      copyIcon.classList.remove("hidden");
+      copiedIcon.classList.add("hidden");
+    }, 2000);
+  } catch (err) {
+    console.error("Failed to copy: ", err);
+    showError("Failed to copy to clipboard");
+  }
+}
+
+function showError(message) {
+  const errorDiv = document.getElementById("loginError");
+  errorDiv.textContent = message;
+  setTimeout(() => {
+    errorDiv.textContent = "";
+  }, 5000);
+}
+
 async function connect() {
+  if (!keysGenerated) {
+    showError("Please generate RSA keys first");
+    return;
+  }
+
   const serverUrl = document.getElementById("serverUrl").value;
   const authToken = document.getElementById("authToken").value;
   const errorDiv = document.getElementById("loginError");
   const connectBtn = document.getElementById("connectBtn");
+  const connectBtnText = document.getElementById("connectBtnText");
 
   if (!serverUrl || !authToken) {
     errorDiv.textContent = "Please enter both server URL and token";
@@ -93,7 +164,7 @@ async function connect() {
   }
 
   connectBtn.disabled = true;
-  connectBtn.textContent = "Connecting...";
+  connectBtnText.textContent = "Connecting...";
   errorDiv.textContent = "";
 
   try {
@@ -104,13 +175,13 @@ async function connect() {
       connected = true;
       updateStatus(true);
 
+      document.getElementById("keySection").classList.add("hidden");
       document.getElementById("loginForm").classList.add("hidden");
       document.getElementById("chatContainer").classList.remove("hidden");
 
       addSystemMessage("Connected to server");
 
-      // Send key exchange message with loaded public key
-      // to save the public key on the server
+      // Send key exchange message
       const keyExchangeMsg = {
         type: "keys-exchange",
         publicKey: publicKey,
@@ -138,13 +209,13 @@ async function connect() {
       console.error("WebSocket error:", error);
       errorDiv.textContent = "Failed to connect to server";
       connectBtn.disabled = false;
-      connectBtn.textContent = "Connect";
+      connectBtnText.textContent = "Connect to Server";
     };
   } catch (error) {
     console.error("Connection error:", error);
     errorDiv.textContent = "Connection failed: " + error.message;
     connectBtn.disabled = false;
-    connectBtn.textContent = "Connect";
+    connectBtnText.textContent = "Connect to Server";
   }
 }
 
@@ -205,11 +276,11 @@ function addMessage(key, content, sender, isOwn = false) {
     content = decryptMessage(key, content);
   }
 
-  messageDiv.className = `p-2 rounded max-w-xs ${isOwn ? "bg-primary text-white ml-auto" : "bg-white border"}`;
+  messageDiv.className = `p-3 rounded-lg max-w-xs ${isOwn ? "bg-primary text-white ml-auto" : "bg-white border shadow-sm"}`;
   messageDiv.innerHTML = `
-            <div class="text-xs opacity-70 mb-1">${sender} • ${timestamp}</div>
-            <div class="text-sm">${escapeHtml(content)}</div>
-        `;
+        <div class="text-xs opacity-70 mb-1">${sender} • ${timestamp}</div>
+        <div class="text-sm">${escapeHtml(content)}</div>
+    `;
 
   messagesDiv.appendChild(messageDiv);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -218,7 +289,8 @@ function addMessage(key, content, sender, isOwn = false) {
 function addSystemMessage(content) {
   const messagesDiv = document.getElementById("messages");
   const messageDiv = document.createElement("div");
-  messageDiv.className = "text-center text-xs text-gray-500 py-1";
+  messageDiv.className =
+    "text-center text-xs text-gray-500 py-2 px-3 bg-gray-100 rounded-lg mx-auto max-w-fit";
   messageDiv.textContent = content;
 
   messagesDiv.appendChild(messageDiv);
@@ -244,10 +316,8 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// decrypt the message data using the private key, then decrypt the message using the secret key
 function decryptMessage(encryptedAESKey, encryptedData) {
   try {
-    // decrypt the aes key using the private key
     const privateKeyPEM = forge.util.decode64(privateKey);
     const pkey = forge.pki.privateKeyFromPem(privateKeyPEM);
     const encryptedKeyBytes = forge.util.decode64(encryptedAESKey);
@@ -256,23 +326,18 @@ function decryptMessage(encryptedAESKey, encryptedData) {
       "RSAES-PKCS1-V1_5",
     );
 
-    // convert to proper format for forge
     const decryptedAESSecretKey = forge.util.createBuffer(
       decryptedAESSecretKeyRaw,
     );
 
-    // Prepare the encrypted data
     const encryptedBytes = forge.util.decode64(encryptedData);
 
     if (encryptedBytes.length < 28) {
       throw new Error("Encrypted data too short");
     }
 
-    // Extract encrypted components
     const nonce = encryptedBytes.substring(0, 12);
     const ciphertextWithTag = encryptedBytes.substring(12);
-
-    // Extract the authentication tag (last 16 bytes)
     const tag = ciphertextWithTag.substring(ciphertextWithTag.length - 16);
     const ciphertext = ciphertextWithTag.substring(
       0,
@@ -305,3 +370,6 @@ function decryptMessage(encryptedAESKey, encryptedData) {
     throw error;
   }
 }
+
+// Initialize the UI state
+updateConnectButton();

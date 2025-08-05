@@ -19,14 +19,14 @@
             };
         </script>
     </head>
-    <body class="bg-gray-100 h-screen flex items-center justify-center">
+    <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
         <div
-            class="bg-white rounded-lg shadow-lg w-full max-w-lg flex flex-col"
+            class="bg-white rounded-lg shadow-lg w-full max-w-2xl flex flex-col"
         >
             <div
                 class="bg-primary text-white p-4 rounded-t-lg flex justify-between items-center"
             >
-                <h1 class="text-lg font-bold">Chat App</h1>
+                <h1 class="text-lg font-bold">Secure Chat App</h1>
                 <div class="flex items-center space-x-2">
                     <div
                         id="status"
@@ -36,74 +36,378 @@
                 </div>
             </div>
 
-            <!-- Login Form -->
-            <div id="loginForm" class="p-4 space-y-4">
-                <div>
-                    <button
-                        onclick="generateKeysAsync()"
-                        id="connectBtn"
-                        class="bg-secondary text-white font-semibold mt-2 p-2 rounded hover:bg-opacity-90"
-                    >
-                        Generate RSA Keys
-                    </button>
-                    <p class="italic text-sm text-red-500">
-                        Before continuing to chat, you must generate RSA key
-                        pair
+            <!-- Key Generation Section -->
+            <div id="keySection" class="p-6 border-b">
+                <div class="mb-4">
+                    <h2 class="text-lg font-semibold mb-2 flex items-center">
+                        <svg
+                            class="w-5 h-5 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                            ></path>
+                        </svg>
+                        RSA Key Generation
+                    </h2>
+                    <p class="text-sm text-gray-600">
+                        Generate your RSA key pair for secure messaging
                     </p>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium mb-1"
-                        >Server URL:</label
+                <div id="keyGenerationStep" class="text-center">
+                    <div class="mb-4">
+                        <div
+                            class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                        >
+                            <svg
+                                class="w-8 h-8 text-primary"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                                ></path>
+                            </svg>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-4">
+                            Click the button below to generate your encryption
+                            keys
+                        </p>
+                    </div>
+
+                    <button
+                        onclick="generateKeysAsync()"
+                        id="generateKeysBtn"
+                        class="bg-secondary text-primary font-semibold px-6 py-3 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                    <input
-                        id="serverUrl"
-                        type="text"
-                        value="ws://localhost:8080/ws"
-                        class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Token:</label>
-                    <input
-                        id="authToken"
-                        type="text"
-                        placeholder="Enter your token"
-                        class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                        <span id="generateBtnText">Generate RSA Keys</span>
+                        <span id="generateSpinner" class="hidden ml-2">
+                            <svg
+                                class="animate-spin h-4 w-4 inline"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle
+                                    class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"
+                                ></circle>
+                                <path
+                                    class="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                            </svg>
+                        </span>
+                    </button>
                 </div>
 
-                <button
-                    onclick="connect()"
-                    id="connectBtn"
-                    class="w-full bg-primary text-white py-2 rounded hover:bg-opacity-90"
-                >
-                    Connect
-                </button>
-                <div id="loginError" class="text-red-500 text-sm"></div>
+                <!-- Keys Display -->
+                <div id="keysDisplay" class="hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center text-green-600">
+                            <svg
+                                class="w-5 h-5 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M5 13l4 4L19 7"
+                                ></path>
+                            </svg>
+                            <span class="font-medium"
+                                >Keys Generated Successfully!</span
+                            >
+                        </div>
+                        <button
+                            onclick="regenerateKeys()"
+                            class="text-sm text-primary hover:text-opacity-80 underline"
+                        >
+                            Regenerate Keys
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Public Key -->
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                            >
+                                <svg
+                                    class="w-4 h-4 inline mr-1"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+                                    ></path>
+                                </svg>
+                                Public Key (Safe to share)
+                            </label>
+                            <div class="relative">
+                                <textarea
+                                    id="publicKeyDisplay"
+                                    readonly
+                                    class="w-full p-3 border rounded-lg bg-gray-50 text-xs font-mono resize-none"
+                                    rows="4"
+                                    placeholder="Public key will appear here..."
+                                ></textarea>
+                                <button
+                                    onclick="copyToClipboard('publicKeyDisplay', 'publicKeyCopied')"
+                                    class="absolute top-2 right-2 p-1 hover:bg-gray-200 rounded transition-colors"
+                                    title="Copy to clipboard"
+                                >
+                                    <svg
+                                        id="publicKeyCopyIcon"
+                                        class="w-4 h-4 text-gray-500"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                        ></path>
+                                    </svg>
+                                    <svg
+                                        id="publicKeyCopied"
+                                        class="hidden w-4 h-4 text-green-500"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M5 13l4 4L19 7"
+                                        ></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Private Key -->
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                            >
+                                <svg
+                                    class="w-4 h-4 inline mr-1"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                    ></path>
+                                </svg>
+                                Private Key
+                                <span class="text-red-500 font-normal"
+                                    >(Keep this secret!)</span
+                                >
+                            </label>
+                            <div class="relative">
+                                <textarea
+                                    id="privateKeyDisplay"
+                                    type="password"
+                                    readonly
+                                    class="w-full p-3 border rounded-lg bg-red-50 text-xs font-mono resize-none"
+                                    rows="6"
+                                    placeholder="Private key will appear here..."
+                                ></textarea>
+                                <div
+                                    class="absolute top-2 right-2 flex space-x-1"
+                                >
+                                    <button
+                                        onclick="togglePrivateKeyVisibility()"
+                                        class="p-1 hover:bg-gray-200 rounded transition-colors"
+                                        title="Toggle visibility"
+                                    >
+                                        <svg
+                                            id="eyeOpen"
+                                            class="w-4 h-4 text-gray-500"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                            ></path>
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                            ></path>
+                                        </svg>
+                                        <svg
+                                            id="eyeClosed"
+                                            class="hidden w-4 h-4 text-gray-500"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
+                                            ></path>
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onclick="copyToClipboard('privateKeyDisplay', 'privateKeyCopied')"
+                                        class="p-1 hover:bg-gray-200 rounded transition-colors"
+                                        title="Copy to clipboard"
+                                    >
+                                        <svg
+                                            id="privateKeyCopyIcon"
+                                            class="w-4 h-4 text-gray-500"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                            ></path>
+                                        </svg>
+                                        <svg
+                                            id="privateKeyCopied"
+                                            class="hidden w-4 h-4 text-green-500"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M5 13l4 4L19 7"
+                                            ></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="text-xs text-red-600 mt-1">
+                                ⚠️ Never share your private key with anyone.
+                                Store it securely.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connection Form -->
+            <div id="loginForm" class="p-6">
+                <h2 class="text-lg font-semibold mb-4 flex items-center">
+                    <svg
+                        class="w-5 h-5 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"
+                        ></path>
+                    </svg>
+                    Connect to Server
+                </h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                            >Server URL:</label
+                        >
+                        <input
+                            id="serverUrl"
+                            type="text"
+                            value="ws://localhost:8080/ws"
+                            class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                            >Authentication Token:</label
+                        >
+                        <input
+                            id="authToken"
+                            type="text"
+                            placeholder="Enter your authentication token"
+                            class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
+                    </div>
+
+                    <button
+                        onclick="connect()"
+                        id="connectBtn"
+                        class="w-full bg-primary text-white py-3 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        disabled
+                    >
+                        <span id="connectBtnText">Generate Keys First</span>
+                    </button>
+                    <div id="loginError" class="text-red-500 text-sm"></div>
+                </div>
             </div>
 
             <!-- Chat Container -->
-            <div id="chatContainer" class="hidden flex flex-col h-96 h-full">
+            <div id="chatContainer" class="hidden flex flex-col">
                 <!-- Messages -->
                 <div
                     id="messages"
-                    class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50"
+                    class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 min-h-96 max-h-96"
                 ></div>
 
                 <!-- Input -->
-                <div class="p-4 border-t bg-white">
+                <div class="p-4 border-t bg-white rounded-b-lg">
                     <div class="flex space-x-2">
                         <input
                             id="messageInput"
                             type="text"
-                            placeholder="Type a message..."
-                            class="flex-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Type a secure message..."
+                            class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                             onkeypress="handleKeyPress(event)"
                         />
                         <button
                             onclick="sendMessage()"
-                            class="bg-primary text-white px-4 py-2 rounded hover:bg-opacity-90"
+                            class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-opacity-90 transition-colors font-medium"
                         >
                             Send
                         </button>
@@ -111,7 +415,6 @@
                 </div>
             </div>
         </div>
-
         <script src="app.js"></script>
     </body>
 </html>

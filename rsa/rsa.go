@@ -85,8 +85,7 @@ func GenerateKeys() (keys RSAKeys, err error) {
 }
 
 // createSeededRandom creates a deterministic random number generator
-// using SHA256 hash of `Sun corp` -- meant to imitate JAVA's SecureRandom
-// -- that has been replaced with a UUID for uniqueness
+// using SHA256 hash of random uuids -- meant to imitate JAVA's SecureRandom
 func createSeededRandom() *rand.Rand {
 	uuid := generateUUID()
 	h := sha256.New()
